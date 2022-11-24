@@ -27,24 +27,21 @@ lon = KYIV_LON
 def check_for_new_data():
     if not (lat == coll1.find_one({})['city']['coord']['lat'] and lon == coll1.find_one({})['city']['coord']['lon']):
         coll1.delete_many({})
+
         def store_json(j_file):
             """Writes the json into db, so we do not need to send request more than 1 time"""
-
-
             coll1.insert_one(j_file)
 
         js = get_forecast(lat=lat, lon=lon)
         store_json(js)
         print('There is new data')
-        return True
-    return False
+
 
 
 def scheme():
     """Gets the important data from all_data"""
-    flag = check_for_new_data()
+    check_for_new_data()
     all_data = coll1.find({})
-
 
     coll.delete_many({})
 
