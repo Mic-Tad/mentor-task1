@@ -1,10 +1,13 @@
 import pymongo
 import requests
+import redis
+import json
 
-client = pymongo.MongoClient("localhost:27017")
-db = client.weather_forecast
+mongourl = "mongodb://mongo:9090"
+redis_client=redis.Redis()
+client = pymongo.MongoClient("localhost:9090")
+db = client.weather_forecast14
 coll = db.Kyiv
-coll1 = db.Kyiv_all_in_one
 KYIV_LAT = 50.27
 KYIV_LON = 30.3125
 
@@ -23,44 +26,51 @@ def get_forecast(lat=KYIV_LAT, lon=KYIV_LON):
 lat = KYIV_LAT
 lon = KYIV_LON
 
+def insert_new_data():
+    redis_client.flushall()
+    def store_json(j_file):
+        """Writes the json into db, so we do not need to send request more than 1 time"""
+        redis_client.set('weather',json.dumps(j_file),500)
+
+        
+
+    js = get_forecast(lat=lat, lon=lon)
+    store_json(js)
+    print('There is new data')
+    return True
 
 def check_for_new_data():
-    if not (lat == coll1.find_one({})['city']['coord']['lat'] and lon == coll1.find_one({})['city']['coord']['lon']):
-        coll1.delete_many({})
-        def store_json(j_file):
-            """Writes the json into db, so we do not need to send request more than 1 time"""
-
-
-            coll1.insert_one(j_file)
-
-        js = get_forecast(lat=lat, lon=lon)
-        store_json(js)
-        print('There is new data')
-        return True
+    data1=redis_client.get('weather')
+    flag=data1 is not None
+    if flag:
+        data1=json.loads(redis_client.get('weather'))
+    if not (flag and lat == data1['city']['coord']['lat'] and lon == data1['city']['coord']['lon']):
+        return insert_new_data()
     return False
 
 
 def scheme():
     """Gets the important data from all_data"""
     flag = check_for_new_data()
-    all_data = coll1.find({})
+    all_data = json.loads(redis_client.get('weather'))
 
 
     coll.delete_many({})
-
+    
     zero_kelvin = -273
-    for i in all_data:
-        for j in i['list']:
-            data = {
-                'date_time': j['dt_txt'],
-                'temp': int(j['main']['temp'] + zero_kelvin),
-                'humidity': j['main']['humidity'],
-                'weather': j['weather'][0]['main'],
-                'wind_speed': int(j['wind']['speed'])
+ 
+    for j in all_data['list']:
+        data = {
+            'date_time': j['dt_txt'],
+            'temp': int(j['main']['temp'] + zero_kelvin),
+            'humidity': j['main']['humidity'],
+            'weather': j['weather'][0]['main'],
+            'wind_speed': int(j['wind']['speed'])
 
-            }
-            coll.insert_one(data)
+        }
+        coll.insert_one(data)
     coll.create_index('date_time')
+    redis_client.close()
 
 
 scheme()
