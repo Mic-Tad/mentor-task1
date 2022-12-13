@@ -40,6 +40,7 @@ def insert_new_data():
     return True
 
 def check_for_new_data():
+<<<<<<< HEAD
     data1=redis_client.get('weather')
     flag=data1 is not None
     if flag:
@@ -47,13 +48,30 @@ def check_for_new_data():
     if not (flag and lat == data1['city']['coord']['lat'] and lon == data1['city']['coord']['lon']):
         return insert_new_data()
     return False
+=======
+    if not (lat == coll1.find_one({})['city']['coord']['lat'] and lon == coll1.find_one({})['city']['coord']['lon']):
+        coll1.delete_many({})
+
+        def store_json(j_file):
+            """Writes the json into db, so we do not need to send request more than 1 time"""
+            coll1.insert_one(j_file)
+
+        js = get_forecast(lat=lat, lon=lon)
+        store_json(js)
+        print('There is new data')
+
+>>>>>>> 2aec5c6daae93723f2a063839a80598b7ec21f83
 
 
 def scheme():
     """Gets the important data from all_data"""
+<<<<<<< HEAD
     flag = check_for_new_data()
     all_data = json.loads(redis_client.get('weather'))
-
+=======
+    check_for_new_data()
+    all_data = coll1.find({})
+>>>>>>> 2aec5c6daae93723f2a063839a80598b7ec21f83
 
     coll.delete_many({})
     
